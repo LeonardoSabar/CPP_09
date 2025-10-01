@@ -40,10 +40,10 @@ O CPP Module 09 da escola 42 é focado no **domínio avançado de containers STL
 A STL é o coração deste módulo. Cada exercício explora um container específico:
 
 #### **Containers Utilizados:**
-- **`std::map`** (Exercício 00): Mapeamento ordenado chave-valor
-- **`std::stack`** (Exercício 01): Estrutura LIFO (Last In, First Out)
-- **`std::vector`** (Exercício 02): Array dinâmico com acesso randômico
-- **`std::deque`** (Exercício 02): Double-ended queue
+- **`std::map`** (Exercício 00): Mapeamento ordenado chave-valor com busca O(log n)
+- **`std::stack`** (Exercício 01): Estrutura LIFO (Last In, First Out) para cálculos RPN
+- **`std::vector`** (Exercício 02): Array dinâmico com acesso randômico O(1)
+- **`std::deque`** (Exercício 02): Double-ended queue com inserção/remoção eficiente nas extremidades
 
 ### **2. Complexidade Algorítmica**
 Cada exercício demonstra diferentes complexidades:
@@ -89,215 +89,351 @@ Criar um programa que simule uma consulta histórica de preços de Bitcoin. O pr
 3. Calcular valores baseados em preços históricos
 4. Validar todas as entradas rigorosamente
 
-### **Conceitos Teóricos Fundamentais**
+### **Arquitetura da Solução Implementada**
 
-#### **1. Estrutura de Dados: `std::map`**
+#### **1. Separação de Responsabilidades**
+
+A implementação atual utiliza **duas classes principais**:
+
+**A. Classe `BitcoinExchange`:**
+```cpp
+class BitcoinExchange {
+public:
+    BitcoinExchange();
+    BitcoinExchange(const BitcoinExchange &other);
+    BitcoinExchange &operator=(const BitcoinExchange &other);
+    ~BitcoinExchange();
+
+    std::map<std::string, float>& getRates();
+    void makeExchange(const std::string &date) const;
+
+private:
+    std::map<std::string, float> rates;
+};
+```
+
+**Responsabilidades:**
+- Armazenar os dados históricos do Bitcoin
+- Realizar cálculos de câmbio
+- Buscar taxas por data (com algoritmo de data mais próxima)
+
+**B. Classe `Parser` (Static Utility Class):**
+```cpp
+class Parser {
+public:
+    static void parseFile(const std::string &filename, BitcoinExchange &exchange);
+    static std::string validateDate(const std::string &dateStr);
+    static float atof(const std::string &rateStr);
+    static int atoi(const std::string &str);
+    static bool validateHeaderInputFile(std::ifstream &file);
+private:
+    // Construtor privado - apenas métodos estáticos
+    Parser();
+    Parser(const Parser &other);
+    Parser &operator=(const Parser &other);
+    ~Parser();
+};
+```
+
+**Responsabilidades:**
+- Parsing de arquivos CSV
+- Validação de formatos de data
+- Conversão segura de strings para números
+- Validação de cabeçalhos de arquivos
+
+#### **2. Estrutura de Dados: `std::map<std::string, float>`**
 
 **Por que `std::map` é a escolha ideal?**
 
 ```cpp
-std::map<std::string, float> _data;
+std::map<std::string, float> rates;  // data -> taxa
 ```
 
-**Características do `std::map`:**
-- **Ordenação Automática:** Elementos sempre ordenados por chave
-- **Busca Eficiente:** O(log n) usando árvore binária balanceada (Red-Black Tree)
-- **Chaves Únicas:** Cada data aparece apenas uma vez
-- **Iteradores Estáveis:** Não invalidam com inserções/remoções
+**Características técnicas:**
+- **Ordenação Automática:** Strings de data são naturalmente ordenadas lexicograficamente
+- **Busca Eficiente:** O(log n) usando Red-Black Tree
+- **upper_bound/lower_bound:** Permite encontrar data mais próxima
+- **Chaves Únicas:** Garante uma taxa por data
 
-**Alternativas e por que foram rejeitadas:**
-- **`std::vector`:** Buscaria em O(n), muito lento
-- **`std::unordered_map`:** Não mantém ordem, inviável para busca de "data mais próxima"
-- **`std::set`:** Não armazena valores associados às chaves
+#### **3. Algoritmo de Busca por Data Mais Próxima**
 
-#### **2. Algoritmo de Busca: `lower_bound`**
-
+**Implementação Atual:**
 ```cpp
-float BitcoinExchange::getRate(const std::string date){
-    std::map<std::string, float>::iterator it = this->_data.lower_bound(date);
-    if (it == this->_data.begin())
-        throw std::runtime_error("Error: Date is too early.");
-    --it;
-    return it->second;
+void BitcoinExchange::makeExchange(const std::string &date) const {
+    // ... parsing e validação ...
+    
+    // Busca exata primeiro
+    std::map<std::string, float>::const_iterator it = rates.find(dateStr);
+    if (it != rates.end()) {
+        float result = rate * it->second;
+        std::cout << dateStr << " => " << rate << " = " << result << std::endl;
+        return;
+    }
+
+    // Se não encontrou data exata, busca a anterior mais próxima
+    it = rates.upper_bound(dateStr);
+    if (it == rates.begin())
+        throw std::runtime_error("No available rate for date: " + dateStr);
+    
+    it--;  // Data anterior mais próxima
+    float result = rate * it->second;
+    std::cout << dateStr << " => " << rate << " = " << result << std::endl;
 }
 ```
 
-**Como `lower_bound` funciona:**
-1. **Encontra a primeira data >= data_pesquisada**
-2. **Se encontrar exatamente:** usa essa data
-3. **Se não encontrar:** usa a data anterior (`--it`)
-4. **Se for a primeira data:** erro (data muito antiga)
+**Lógica do Algoritmo:**
+1. **Busca Exata:** Usa `find()` para procurar a data específica
+2. **Busca Aproximada:** Usa `upper_bound()` para encontrar a primeira data maior
+3. **Retrocede:** `it--` para pegar a data anterior (mais próxima menor)
+4. **Validação:** Se `it == begin()`, a data é muito antiga
 
-**Exemplo Prático:**
-```
-Banco de dados:
-2009-01-02 -> 0
-2009-01-05 -> 0
-2009-01-08 -> 5.2
-2009-01-11 -> 7.8
+#### **4. Sistema Robusto de Validação**
 
-Consulta: 2009-01-07
-1. lower_bound(2009-01-07) aponta para 2009-01-08
-2. --it aponta para 2009-01-05
-3. Retorna preço de 2009-01-05 (0)
-```
-
-#### **3. Validações Implementadas**
-
-**A. Validação de Data:**
+**A. Validação de Data com Verificação Completa:**
 ```cpp
-bool dataFormat(std::string &date){
-    // Formato: YYYY-MM-DD (exatamente 10 caracteres)
-    if (date.size() != 10 || date[4] != '-' || date[7] != '-')
-        return false;
-    
-    // Apenas dígitos e hífens
-    for (size_t i = 0; i < date.size(); i++){
-        if (!std::isdigit(date[i]) && date[i] != '-')
-            return false;
+std::string Parser::validateDate(const std::string &dateStr) {
+    size_t first = dateStr.find('-');
+    size_t second = dateStr.find('-', first + 1);
+
+    std::string yearStr = dateStr.substr(0, first);
+    std::string monthStr = dateStr.substr(first + 1, second - first - 1);
+    std::string dayStr = dateStr.substr(second + 1);
+
+    int year = Parser::atoi(yearStr);
+    int month = Parser::atoi(monthStr);
+    int day = Parser::atoi(dayStr);
+
+    // Validação básica
+    if (year < 0 || month < 1 || month > 12 || day < 1 || day > 31)
+        throw std::invalid_argument("Invalid date format: " + dateStr);
+
+    // Validação de anos bissextos
+    if (month == 2) {
+        bool isLeap = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+        if (day > (isLeap ? 29 : 28))
+            throw std::invalid_argument("invalid date format: " + dateStr);
     }
     
-    // Validação de data real
-    int year = std::atoi(date.substr(0,4).c_str());
-    int month = std::atoi(date.substr(5,2).c_str());
-    int day = std::atoi(date.substr(8,2).c_str());
-    return check_date(year, month, day);
+    // Validação de meses com 30 dias
+    else if ((month == 4 || month == 6 || month == 9 || month == 11) && day > 30)
+        throw std::invalid_argument("Invalid date format: " + dateStr);
+
+    return dateStr;
 }
 ```
 
-**B. Validação de Anos Bissextos:**
+**B. Conversão Segura de Números:**
 ```cpp
-bool leapYear(int year){
-    // Regra: divisível por 4, mas não por 100, exceto se divisível por 400
-    if (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0))
-        return true;
-    return false;
+float Parser::atof(const std::string &rateStr) {
+    float rate;
+    std::istringstream iss(rateStr);
+    iss >> rate;
+
+    if (iss.fail())
+        throw std::invalid_argument("bad input " + rateStr);
+
+    if (rate < 0)
+        throw std::invalid_argument("not a positive number " + rateStr);
+
+    return rate;
 }
 ```
 
-**C. Validação de Valores:**
-```cpp
-bool check_value(std::string value){
-    // Deve ser número positivo
-    float floatValue = std::atof(value.c_str());
-    if (floatValue < 0){
-        std::cerr << "Error: not a positive number." << std::endl;
-        return false;
-    }
-    
-    // Não pode exceder 1000
-    if (floatValue > 1000){
-        std::cerr << "Error: too large a number." << std::endl;
-        return false;
-    }
-    
-    return true;
-}
-```
+### **Fluxo de Execução Implementado:**
 
-### **Fluxo de Execução Detalhado:**
-
-1. **Inicialização:**
+1. **Inicialização do Sistema:**
    ```cpp
-   BitcoinExchange::BitcoinExchange(){
-       loadData("data.csv");  // Carrega ~1600 registros históricos
+   int main(int argc, char **argv) {
+       BitcoinExchange exchange;
+       
+       // Carrega database histórico
+       Parser::parseFile("data.csv", exchange);
    }
    ```
 
-2. **Carregamento de Dados:**
+2. **Carregamento do Database (data.csv):**
    ```cpp
-   bool BitcoinExchange::loadData(const std::string &filename){
+   void Parser::parseFile(const std::string &filename, BitcoinExchange &exchange) {
        std::ifstream file(filename.c_str());
-       // Processa cada linha: "2009-01-02,0"
-       // Separa por vírgula
-       // Armazena no map: _data["2009-01-02"] = 0
+       if (!file.is_open() || file.fail())
+           throw std::runtime_error("Could not open file");
+
+       // Valida cabeçalho obrigatório
+       std::string line;
+       std::getline(file, line);
+       if (line != "date,exchange_rate")
+           throw std::runtime_error("Invalid file format");
+
+       // Processa cada linha do histórico
+       std::map<std::string, float> &rates = exchange.getRates();
+       while (std::getline(file, line)) {
+           size_t commaPos = line.find(',');
+           if (commaPos != std::string::npos) {
+               std::string date = Parser::validateDate(line.substr(0, commaPos));
+               float rate = Parser::atof(line.substr(commaPos + 1));
+               rates[date] = rate;  // Armazena: "2009-01-02" -> 0.0
+           }
+       }
    }
    ```
 
-3. **Processamento de Entrada:**
+3. **Processamento do Arquivo de Input:**
    ```cpp
-   void readInputFile(const char *file, BitcoinExchange exchange){
-       // Valida cabeçalho: "date | value"
-       // Processa cada linha
-       // Valida formato e calcula resultado
+   std::ifstream inputFile(argv[1]);
+   if (!Parser::validateHeaderInputFile(inputFile)) {
+       std::cerr << "Error: could not open file." << std::endl;
+       return 1;
+   }
+
+   int lineCount = 2;
+   std::string line;
+   while(std::getline(inputFile, line)) {
+       try {
+           exchange.makeExchange(line);  // Processa: "2011-01-03 | 3"
+       } catch(std::exception& e) {
+           std::cerr << "Error line " << lineCount << " - " << line 
+                     << " => " << e.what() << std::endl;
+       }
+       lineCount++;
    }
    ```
 
-4. **Cálculo Final:**
+4. **Cálculo e Exibição:**
    ```cpp
-   void printFormat(std::string date, float value, BitcoinExchange exchange){
-       std::cout << date << " => " << value << " = " 
-                 << exchange.getRate(date) * value << std::endl;
+   void BitcoinExchange::makeExchange(const std::string &date) const {
+       size_t pipe_pos = date.find('|');
+       
+       std::string dateStr = Parser::validateDate(date.substr(0, pipe_pos));
+       std::string rateStr = date.substr(pipe_pos + 1);
+       float rate = Parser::atof(rateStr);
+       
+       if (rate > 1000.0f)
+           throw std::invalid_argument("too large a number " + rateStr);
+       
+       // Busca taxa histórica e calcula
+       // ... algoritmo de busca ...
+       
+       float result = rate * historical_rate;
+       std::cout << dateStr << " => " << std::fixed << std::setprecision(2) 
+                 << rate << " = " << result << std::endl;
    }
    ```
 
-### **Casos de Teste Importantes:**
+### **Casos de Teste e Validações:**
 
 **Entradas Válidas:**
 ```
 date | value
-2011-01-03 | 3      → 2011-01-03 => 3 = 9
-2011-01-03 | 2      → 2011-01-03 => 2 = 6
+2011-01-03 | 3      → 2011-01-03 => 3.00 = 9.00
+2011-01-03 | 2      → 2011-01-03 => 2.00 = 6.00
+2011-01-09 | 1      → 2011-01-09 => 1.00 = 0.32
 ```
 
-**Entradas Inválidas:**
+**Tratamento de Erros Específicos:**
 ```
-2012-01-11 | -1     → Error: not a positive number.
-2001-42-42          → Error: bad input => 2001-42-42
-2012-01-11 | 1001   → Error: too large a number.
+2012-01-11 | -1     → Error line X - ... => not a positive number -1
+2001-42-42 | 1      → Error line X - ... => Invalid date format: 2001-42-42
+2012-01-11 | 1001   → Error line X - ... => too large a number 1001
+2009-01-01 | 1      → Error line X - ... => No available rate for date: 2009-01-01
+bad_format          → Error line X - ... => (parsing error)
 ```
+
+### **Características Técnicas Avançadas:**
+
+**A. Gerenciamento de Memória:**
+- Uso de containers STL (gerenciamento automático)
+- RAII (Resource Acquisition Is Initialization)
+- Exception safety garantida
+
+**B. Performance:**
+- Carregamento O(n log n) do database
+- Busca por data O(log n)
+- Processamento linear do input O(m log n), onde m = linhas input
+
+**C. Robustez:**
+- Tratamento completo de exceções
+- Validação rigorosa de todos os inputs
+- Mensagens de erro específicas e informativas
 
 ---
 
 ## **Exercício 01 - RPN (Reverse Polish Notation)**
 
 ### **Objetivo Detalhado:**
-Implementar uma calculadora que avalia expressões matemáticas em **Notação Polonesa Reversa** (RPN), também conhecida como notação pós-fixa.
+Implementar uma calculadora que avalia expressões matemáticas em **Notação Polonesa Reversa** (RPN), também conhecida como notação pós-fixa. O programa deve processar uma string de entrada contendo números de um dígito (0-9) e operadores básicos (+, -, *, /), separados por espaços.
 
-### **Conceitos Teóricos Fundamentais**
+### **Arquitetura da Solução Implementada**
 
-#### **1. O que é Notação Polonesa Reversa?**
-
-**Comparação de Notações:**
-- **Infixa (normal):** `(8 + 9) * 2`
-- **Prefixa:** `* + 8 9 2`
-- **Pós-fixa (RPN):** `8 9 + 2 *`
-
-**Vantagens da RPN:**
-1. **Não precisa de parênteses** para definir precedência
-2. **Avaliação linear** da esquerda para direita
-3. **Ideal para pilhas** (estrutura LIFO)
-4. **Sem ambiguidade** na ordem de operações
-
-#### **2. Por que `std::stack` é Perfeito para RPN?**
+#### **1. Estrutura da Classe RPN**
 
 ```cpp
-std::stack<int> _stack;
+class rpn {
+private:
+    std::stack<int> _stack;
+public:
+    rpn();
+    ~rpn();
+    rpn(const rpn &other);
+    rpn &operator=(const rpn &other);
+
+    void run(std::string expression);
+    void calculate(char op);
+    bool checkInput(std::string str);
+    bool checkValidNumber(std::string str);
+};
 ```
 
-**Características do `std::stack`:**
-- **LIFO (Last In, First Out):** Último elemento inserido é o primeiro removido
-- **Operações O(1):** `push()`, `pop()`, `top()`
-- **Adaptador de Container:** Pode usar `vector`, `deque` ou `list` por baixo
-- **Interface Simples:** Apenas as operações necessárias expostas
+**Características da Implementação:**
+- **Container Único:** Um `std::stack<int>` para armazenar operandos
+- **Validação Rigorosa:** Múltiplas camadas de validação de entrada
+- **Exception Safety:** Tratamento completo de erros (divisão por zero, etc.)
+- **Canonical Form:** Implementação completa do Coplien Form
 
-**Algoritmo RPN Passo a Passo:**
+#### **2. Por que `std::stack<int>` é Ideal para RPN?**
+
+**Vantagens Técnicas:**
+- **LIFO (Last In, First Out):** Perfeito para operações matemáticas em pós-fixa
+- **Operações O(1):** `push()`, `pop()`, `top()` são constantes
+- **Adaptador de Container:** Usa `std::deque` por padrão (eficiente)
+- **Interface Minimalista:** Apenas as operações necessárias expostas
+
+**Conceito RPN:**
+- **Infixa:** `(8 + 9) * 2` → Precisa de parênteses e precedência
+- **RPN:** `8 9 + 2 *` → Avaliação linear, sem ambiguidade
+
+#### **3. Algoritmo Principal Implementado**
+
 ```cpp
-void rpn::run(std::string expression){
-    for (size_t i = 0; i < expression.size(); i++){
+void rpn::run(std::string expression) {
+    if (!checkInput(expression))
+        return;
+    
+    for (size_t i = 0; i < expression.size(); i++) {
+        if (expression[i] == ' ')
+            continue;
+        
         if (std::isdigit(expression[i]))
-            this->_stack.push(expression[i] - '0');  // Empilha operando
-        else if (/* é operador */) {
-            // Desempilha dois operandos
-            int b = this->_stack.top(); this->_stack.pop();
-            int a = this->_stack.top(); this->_stack.pop();
-            // Calcula e empilha resultado
+            this->_stack.push(expression[i] - '0');  // Converte char para int
+        
+        else if (expression[i] == '+' || expression[i] == '-' || 
+                 expression[i] == '*' || expression[i] == '/') {
+            if (this->_stack.size() < 2) {
+                std::cerr << "Error: insuficiente number of operands." << std::endl;
+                return;
+            }
             calculate(expression[i]);
         }
     }
-    std::cout << this->_stack.top() << std::endl;  // Resultado final
+    std::cout << this->_stack.top() << std::endl;
 }
 ```
+
+**Fluxo do Algoritmo:**
+1. **Validação:** Verifica se a entrada é válida
+2. **Parsing:** Processa cada caractere da string
+3. **Operandos:** Empilha números (convertendo char para int)
+4. **Operadores:** Desempilha 2 valores, calcula e empilha resultado
+5. **Resultado:** O último valor na pilha é o resultado final
 
 #### **3. Exemplo Completo de Execução:**
 
