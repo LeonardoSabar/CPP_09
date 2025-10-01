@@ -1,15 +1,14 @@
 NAME		:= btc
 
-CC			:= c++
-FLAGS		:= -Wall -Wextra -Werror -std=c++98 -g3
+CXX			:= c++
+CXXFLAGS	:= -Wall -Wextra -Werror -std=c++98 -Iinclude
 
-ifdef DEBUG
-FLAGS		+= -DDEBUG
-endif
+SRC_DIR		:= src
+OBJ_DIR		:= build
+INC_DIR		:= include
 
-HEADER		:= $(shell find . -name "*.hpp") $(shell find . -name "*.tpp")
-SRC			:= $(shell find . -name "*.cpp")
-OBJ			:= $(SRC:%.cpp=build/%.o)
+SRC			:= $(SRC_DIR)/main.cpp $(SRC_DIR)/BitcoinExchange.cpp $(SRC_DIR)/Parser.cpp
+OBJ			:= $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRC))
 
 #Colors:
 GREEN		:= \e[92;5;118m
@@ -20,24 +19,26 @@ CURSIVE		:= \e[33;3m
 
 all: $(NAME)
 
-$(NAME): build $(OBJ)
+$(NAME): $(OBJ)
 	@printf "$(CURSIVE)$(GRAY)- Compiling $(NAME)... $(RESET)\n"
-	@$(CC) $(FLAGS) $(OBJ) -o $(NAME)
+	@$(CXX) $(CXXFLAGS) $(OBJ) -o $(NAME)
 	@printf "$(GREEN)- Executable ready.\n$(RESET)"
 
-build/%.o: %.cpp $(HEADER)
-	@printf "$(CURSIVE)$(GRAY)- Compiling $<... $(RESET)\n"
-	@$(CC) $(FLAGS) -c $< -o $@
+$(OBJ_DIR):
+	@mkdir -p $(OBJ_DIR)
 
-build:
-	@mkdir -p build
+$(OBJ_DIR)/%.o : $(SRC_DIR)/%.cpp | $(OBJ_DIR)
+	@printf "$(CURSIVE)$(GRAY)- Compiling $<... $(RESET)\n"
+	@$(CXX) $(CXXFLAGS) -c $< -o $@
+	@echo "[OK] Compilado: $< -> $@"
 
 clean:
-	@rm -rf build
-	@rm -rf $(NAME)
-	@printf "$(YELLOW)- Executable removed.$(RESET)\n"
+	@rm -rf $(OBJ_DIR)
+	@echo "Objects files removed."
 
 fclean: clean
+	@rm -f $(NAME)
+	@echo "Executable file removed."
 
 re: fclean all
 
