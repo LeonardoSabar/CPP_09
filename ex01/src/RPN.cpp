@@ -25,12 +25,22 @@ void rpn::run(std::string expression){
         else if (expression[i] == '+' || expression[i] == '-' || expression[i] == '*' 
             || expression[i] == '/'){
                 if (this->_stack.size() < 2){
-                    std::cerr << "Error: insuficiente number of operands." << std::endl;
+                    std::cerr << "Error" << std::endl;
                     return ;
                 }
                 calculate(expression[i]);
             }
+        else {
+            std::cerr << "Error" << std::endl;
+            return;
         }
+        }
+
+    if (this->_stack.size() != 1) {
+        std::cerr << "Error" << std::endl;
+        return;
+    }
+
     std::cout << this->_stack.top() << std::endl;
 }
 
