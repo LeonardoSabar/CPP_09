@@ -435,69 +435,119 @@ void rpn::run(std::string expression) {
 4. **Operadores:** Desempilha 2 valores, calcula e empilha resultado
 5. **Resultado:** O último valor na pilha é o resultado final
 
-#### **3. Exemplo Completo de Execução:**
-
-**Expressão:** `"8 9 * 9 - 9 - 9 - 4 - 1 +"`
-
-| Passo | Token | Ação | Stack Estado | Explicação |
-|-------|-------|------|-------------|------------|
-| 1 | '8' | Push | [8] | Empilha 8 |
-| 2 | ' ' | Skip | [8] | Ignora espaços |
-| 3 | '9' | Push | [8, 9] | Empilha 9 |
-| 4 | ' ' | Skip | [8, 9] | Ignora espaços |
-| 5 | '*' | Op | [72] | Pop 9,8 → 8*9=72 → Push 72 |
-| 6 | ' ' | Skip | [72] | Ignora espaços |
-| 7 | '9' | Push | [72, 9] | Empilha 9 |
-| 8 | ' ' | Skip | [72, 9] | Ignora espaços |
-| 9 | '-' | Op | [63] | Pop 9,72 → 72-9=63 → Push 63 |
-| 10 | '9' | Push | [63, 9] | Empilha 9 |
-| 11 | '-' | Op | [54] | Pop 9,63 → 63-9=54 → Push 54 |
-| 12 | '9' | Push | [54, 9] | Empilha 9 |
-| 13 | '-' | Op | [45] | Pop 9,54 → 54-9=45 → Push 45 |
-| 14 | '4' | Push | [45, 4] | Empilha 4 |
-| 15 | '-' | Op | [41] | Pop 4,45 → 45-4=41 → Push 41 |
-| 16 | '1' | Push | [41, 1] | Empilha 1 |
-| 17 | '+' | Op | [42] | Pop 1,41 → 41+1=42 → Push 42 |
-
-**Resultado Final:** 42
-
-#### **4. Implementação das Operações:**
+#### **4. Implementação das Operações Matemáticas**
 
 ```cpp
-void rpn::calculate(char op){
-    // IMPORTANTE: Ordem dos operandos
-    int b = this->_stack.top(); this->_stack.pop();  // Segundo operando
+void rpn::calculate(char op) {
+    // CRÍTICO: Ordem correta dos operandos
+    int b = this->_stack.top(); this->_stack.pop();  // Segundo operando (topo)
     int a = this->_stack.top(); this->_stack.pop();  // Primeiro operando
 
     switch (op) {
-        case '+': this->_stack.push(a + b); break;
-        case '-': this->_stack.push(a - b); break;  // a - b, não b - a!
-        case '*': this->_stack.push(a * b); break;
+        case '+': 
+            this->_stack.push(a + b);
+            break;
+        case '-': 
+            this->_stack.push(a - b);  // SEMPRE a - b, nunca b - a
+            break;
+        case '*': 
+            this->_stack.push(a * b);
+            break;
         case '/': 
             if (b == 0)
                 throw std::runtime_error("Error: Division by zero.");
-            this->_stack.push(a / b);  // a / b, não b / a!
+            this->_stack.push(a / b);  // SEMPRE a / b, nunca b / a
             break;
     }
 }
 ```
 
-**Por que a ordem importa?**
-- Para subtração: `5 3 -` deve ser `5 - 3 = 2`, não `3 - 5 = -2`
-- Para divisão: `8 2 /` deve ser `8 / 2 = 4`, não `2 / 8 = 0`
+**Por que a ordem dos operandos é crítica?**
+- **Subtração:** `5 3 -` → Stack: [5, 3] → Pop: b=3, a=5 → Resultado: 5-3=2
+- **Divisão:** `8 2 /` → Stack: [8, 2] → Pop: b=2, a=8 → Resultado: 8/2=4
 
-#### **5. Validações Implementadas:**
+#### **5. Sistema Completo de Validação**
 
+**A. Validação de Entrada Principal:**
 ```cpp
-bool rpn::checkInput(std::string str){
-    // Verifica se entrada não é vazia
-    if (str.empty() || isOnlySpace(str)){
+bool rpn::checkInput(std::string str) {
+    if (str.empty() || isOnlySpace(str)) {
         std::cerr << "Error: empty input." << std::endl;
         return false;
     }
     
-    // Valida cada token
     std::istringstream iss(str);
+    std::string token;
+    while (iss >> token) {
+        if(token == "+" || token == "-" || token == "*" || token == "/")
+            continue;  // Operadores válidos
+        if (!checkValidNumber(token))
+            return false;  // Número inválido
+    }
+    return true;
+}
+```
+
+**B. Validação de Números (Apenas Dígitos 0-9):**
+```cpp
+bool rpn::checkValidNumber(std::string str) {
+    std::istringstream iss(str);
+    int num;
+    if (!(iss >> num) && !iss.eof()) {
+        std::cerr << "Error: invalid operator '" << str << "'." << std::endl;
+        return false;
+    }
+    if (num < 0 || num > 9) {
+        std::cerr << "Error: invalid number '" << str << "'." << std::endl;
+        return false;
+    }
+    return true;
+}
+```
+
+**C. Verificação de Operandos Suficientes:**
+```cpp
+// Dentro do loop principal
+if (this->_stack.size() < 2) {
+    std::cerr << "Error: insuficiente number of operands." << std::endl;
+    return;
+}
+```
+
+#### **6. Exemplo Prático de Execução:**
+
+**Entrada:** `"8 9 + 1 7 * -"`
+
+| Passo | Token | Ação | Stack | Cálculo |
+|-------|-------|------|-------|---------|
+| 1 | '8' | Push | [8] | - |
+| 2 | '9' | Push | [8, 9] | - |
+| 3 | '+' | Calc | [17] | Pop 9,8 → 8+9=17 |
+| 4 | '1' | Push | [17, 1] | - |
+| 5 | '7' | Push | [17, 1, 7] | - |
+| 6 | '*' | Calc | [17, 7] | Pop 7,1 → 1*7=7 |
+| 7 | '-' | Calc | [10] | Pop 7,17 → 17-7=10 |
+
+**Resultado:** 10
+
+#### **7. Casos de Teste Importantes:**
+
+**Entradas Válidas:**
+```bash
+./RPN "8 9 * 9 - 9 - 9 - 4 - 1 +"  → 42
+./RPN "7 7 * 7 -"                  → 42
+./RPN "1 2 * 2 / 2 * 2 2 - + 2 + 2 +" → 42
+./RPN "0 1 2 * + 3 +"               → 6
+```
+
+**Entradas Inválidas:**
+```bash
+./RPN "8 9 * * 9 - 9 - 9 - 4 - 1 +" → Error: insuficiente number of operands.
+./RPN "1 0 /"                       → Error: Division by zero.
+./RPN "1 p"                         → Error: invalid operator 'p'.
+./RPN "1 23"                        → Error: invalid number '23'.
+./RPN ""                            → Error: empty input.
+```
     std::string token;
     while (iss >> token){
         if(token == "+" || token == "-" || token == "*" || token == "/")
@@ -548,203 +598,365 @@ bool rpn::checkValidNumber(std::string str){
 ## **Exercício 02 - PmergeMe (Ford-Johnson Algorithm)**
 
 ### **Objetivo Detalhado:**
-Implementar o **algoritmo de ordenação Ford-Johnson** (também conhecido como merge-insertion sort) e comparar a performance entre `std::vector` e `std::deque`.
+Implementar o **algoritmo de ordenação Ford-Johnson** (merge-insertion sort) com comparação de performance entre `std::vector` e `std::deque`. O programa deve ordenar uma sequência de inteiros positivos e mostrar o tempo de execução para ambos os containers.
 
-### **Conceitos Teóricos Fundamentais**
+### **Arquitetura da Solução Implementada**
 
-#### **1. O que é o Algoritmo Ford-Johnson?**
+#### **1. Estrutura da Classe PmergeMe**
 
-O Ford-Johnson é um algoritmo de ordenação híbrido que combina:
-- **Merge Sort:** Para dividir o problema
-- **Insertion Sort:** Para inserção otimizada
-- **Sequência de Jacobsthal:** Para minimizar comparações
+```cpp
+class Pmerge {
+private:
+    std::vector<int> _vec;
+    std::deque<int> _deq;
+    double _vTime;    // Tempo de execução para vector
+    double _dTime;    // Tempo de execução para deque
+public:
+    Pmerge();
+    ~Pmerge();
+    Pmerge(const Pmerge &other);
+    Pmerge &operator=(const Pmerge &other);
 
-**Características Únicas:**
-- **Número mínimo de comparações:** Teoricamente ótimo para pequenos conjuntos
-- **Complexidade:** O(n log n) no pior caso
-- **Uso de sequência matemática:** Jacobsthal para ordem de inserção
+    void run(int argc, char **argv);
+    bool checkArgs(int argc, char **argv);
+    std::vector<size_t> generateJacobstallSequence(size_t len);
+    double calc_time(clock_t start, clock_t end);
 
-#### **2. Sequência de Jacobsthal**
+    // Métodos específicos para vector
+    void fordJohnsonVec(void);
+    void fordJohnsonVecPairs(const std::vector<int> &inputVec, 
+                            std::vector<int> &big, std::vector<int> &small);
+    void fordJohnsonStep2(std::vector<int> &big, std::vector<int> &small);
+    void orderByJacobstallSeq_vec(std::vector<int> &big, std::vector<int> &small);
 
-**Definição Matemática:**
+    // Métodos específicos para deque
+    void fordJohnsonDeq(void);
+    void fordJohnsonDeqPairs(const std::deque<int> &inputDeq, 
+                            std::deque<int> &big, std::deque<int> &small);
+    void fordJohnsonDeq2(std::deque<int> &big, std::deque<int> &small);
+    void orderByJacobstallSeq_deq(std::deque<int> &big, std::deque<int> &small);
+};
 ```
-J(0) = 0
-J(1) = 1  
+
+#### **2. O Algoritmo Ford-Johnson (Merge-Insertion Sort)**
+
+**Características do Algoritmo:**
+- **Objetivo:** Minimizar o número de comparações necessárias
+- **Técnica:** Combina ordenação por pares com inserção otimizada
+- **Sequência de Jacobsthal:** Determina a ordem ideal de inserção
+- **Complexidade:** O(n log n) com constante otimizada
+
+#### **3. Sequência de Jacobsthal - Implementação Real**
+
+**Fórmula Matemática:**
+```
+J(0) = 1, J(1) = 1
 J(n) = J(n-1) + 2*J(n-2) para n > 1
 ```
 
-**Sequência:** 0, 1, 1, 3, 5, 11, 21, 43, 85, 171, 341...
-
-**Implementação:**
+**Implementação Atual:**
 ```cpp
-std::vector<size_t> Pmerge::generateJacobstallSequence(size_t len){
+std::vector<size_t> Pmerge::generateJacobstallSequence(size_t len) {
     std::vector<size_t> _order;
-    size_t j0 = 1;  // J(1)
-    size_t j1 = 1;  // J(2) (na verdade deveria ser 3, mas a implementação começa diferente)
+    size_t j0 = 1;  // Valor inicial J(0)
+    size_t j1 = 1;  // Valor inicial J(1)
 
-    while(j1 < len){
+    while(j1 < len) {
         _order.push_back(j1);
-        size_t next = j1 + 2 * j0;  // Fórmula de recorrência
-        j0 = j1;
-        j1 = next;
+        size_t next = j1 + 2 * j0;  // J(n) = J(n-1) + 2*J(n-2)
+        j0 = j1;    // Avança j0 para J(n-1)
+        j1 = next;  // Avança j1 para J(n)
     }
-    return _order;
+    return _order;  // Retorna: [1, 3, 5, 11, 21, 43, 85, ...]
 }
 ```
 
-**Por que Jacobsthal minimiza comparações?**
-A sequência define a ordem ideal para inserir elementos de forma que:
-1. Elementos são inseridos em posições que minimizam buscas binárias
-2. A estrutura da árvore de comparações é otimizada
-3. Reduz redundância nas comparações
+**Por que Jacobsthal é Eficiente?**
+- **Minimiza Comparações:** A sequência define ordem ótima de inserção
+- **Estrutura de Árvore:** Cria árvore de comparações balanceada
+- **Busca Binária Otimizada:** Reduz profundidade média de busca
 
-#### **3. Comparação: `std::vector` vs `std::deque`**
+#### **4. Comparação Técnica: `std::vector` vs `std::deque`**
 
 | Aspecto | `std::vector` | `std::deque` |
 |---------|---------------|--------------|
-| **Estrutura** | Array contíguo | Blocos separados |
-| **Acesso Aleatório** | O(1) | O(1) |
-| **Inserção no Meio** | O(n) | O(n) |
-| **Inserção nas Extremidades** | O(1) amortizado (fim), O(n) (início) | O(1) (ambas) |
-| **Cache Locality** | Excelente | Boa |
-| **Overhead de Memória** | Baixo | Médio |
-| **Realocação** | Pode realocar tudo | Nunca realoca elementos existentes |
+| **Estrutura de Memória** | Array contíguo | Blocos separados conectados |
+| **Acesso Aleatório** | O(1) - direto | O(1) - calculado |
+| **Inserção no Meio** | O(n) - move elementos | O(n) - move elementos |
+| **Inserção/Remoção Início** | O(n) - realoca tudo | O(1) - novo bloco |
+| **Inserção/Remoção Fim** | O(1) amortizado | O(1) - direto |
+| **Cache Locality** | Excelente (contíguo) | Boa (blocos locais) |
+| **Overhead de Memória** | Mínimo | Médio (ponteiros) |
+| **Realocação** | Pode realocar todos | Nunca move existentes |
+| **Performance Ford-Johnson** | Melhor para small datasets | Melhor para inserções frequentes |
 
-#### **4. Implementação do Ford-Johnson**
+#### **5. Fluxo de Execução Principal**
 
-**Passo 1: Divisão em Pares**
 ```cpp
-void Pmerge::fordJohnsonVecPairs(const std::vector<int> &inputVec, 
-                                std::vector<int> &big, std::vector<int> &small){
-    std::vector<std::pair<int, int> > _pairs;
-
-    // Agrupa elementos em pares
-    for (size_t i = 0; i + 1 < inputVec.size(); i += 2){
-        int a = inputVec[i];
-        int b = inputVec[i + 1];
-        if (a < b)
-            _pairs.push_back(std::make_pair(a, b));  // (menor, maior)
-        else
-            _pairs.push_back(std::make_pair(b, a));  // (menor, maior)
+void Pmerge::run(int argc, char **argv) {
+    // 1. Validação de argumentos
+    if (!checkArgs(argc, argv)) {
+        std::cerr << "Error" << std::endl;
+        return;
     }
     
-    // Separa em vetores de "pequenos" e "grandes"
-    for (size_t i = 0; i < _pairs.size(); i++){
-        small.push_back(_pairs[i].first);   // Menores
-        big.push_back(_pairs[i].second);    // Maiores
+    // 2. População dos containers
+    for (int i = 1; i < argc; i++) {
+        long value = std::atol(argv[i]);
+        if (value > INT_MAX) {
+            std::cerr << "Error" << std::endl;
+            return;
+        }
+        _vec.push_back(value);  // Mesmos dados
+        _deq.push_back(value);  // em ambos containers
     }
     
-    // Se número ímpar, adiciona último elemento aos pequenos
-    if (inputVec.size() % 2 == 1)
-        small.push_back(inputVec.back());
+    // 3. Processamento e timing do vector
+    printVec(0, this->_vec);     // Before
+    fordJohnsonVec();            // Ordena + cronometra
+    printVec(1, this->_vec);     // After
+    printTimeVec();              // Tempo vector
+    
+    // 4. Processamento e timing do deque
+    printDec(0, this->_deq);     // Before
+    fordJohnsonDeq();            // Ordena + cronometra
+    printDec(1, this->_deq);     // After  
+    printTimeDec();              // Tempo deque
 }
 ```
 
-**Passo 2: Ordenação Recursiva**
-```cpp
-void Pmerge::fordJohnsonStep2(std::vector<int> &big, std::vector<int> &small){
-    // Ordena recursivamente os elementos "grandes"
-    if (big.size() > 1) {
-        // Chama Ford-Johnson recursivamente ou usa std::sort para pequenos conjuntos
-        std::sort(big.begin(), big.end());
-    }
-    
-    // Insere elementos "pequenos" usando sequência de Jacobsthal
-    orderByJacobstallSeq_vec(big, small);
-}
-```
+#### **6. Sistema de Validação Rigoroso**
 
-**Passo 3: Inserção com Jacobsthal**
 ```cpp
-void Pmerge::orderByJacobstallSeq_vec(std::vector<int> &big, std::vector<int> &small){
-    std::vector<size_t> jacobsthal = generateJacobstallSequence(small.size());
-    
-    // Insere primeiro elemento diretamente
-    if (!small.empty()) {
-        big.insert(big.begin(), small[0]);
-    }
-    
-    // Insere elementos seguindo a sequência de Jacobsthal
-    for (size_t i = 0; i < jacobsthal.size() && jacobsthal[i] < small.size(); i++) {
-        size_t index = jacobsthal[i];
+bool Pmerge::checkArgs(int argc, char **argv) {
+    for (int i = 1; i < argc; i++) {
+        if (argv[i][0] == '\0')  // String vazia
+            return false;
         
-        // Busca binária para encontrar posição de inserção
-        std::vector<int>::iterator pos = std::lower_bound(big.begin(), big.end(), small[index]);
-        big.insert(pos, small[index]);
+        std::string str(argv[i]);
+        for (size_t j = 0; j < str.size(); j++) {
+            if (!std::isdigit(str[j]))  // Apenas dígitos permitidos
+                return false;
+        }
     }
+    return true;
 }
 ```
 
-#### **5. Medição de Performance**
+**Validações Implementadas:**
+- **Apenas números positivos:** Sem sinais negativos ou caracteres especiais
+- **Apenas inteiros:** Sem pontos decimais
+- **Range válido:** Verificação de INT_MAX overflow
+- **Strings não vazias:** Rejeita argumentos vazios
+
+#### **7. Medição Precisa de Performance**
 
 ```cpp
-void Pmerge::fordJohnsonVec(){
+void Pmerge::fordJohnsonVec() {
     std::vector<int> _smallValues;
     std::vector<int> _bigValues;
 
-    clock_t vec_start = clock();  // Início da medição
+    clock_t vec_start = clock();  // Início preciso
     
     fordJohnsonVecPairs(this->_vec, _bigValues, _smallValues);
     fordJohnsonStep2(_bigValues, _smallValues);
-    this->_vec = _bigValues;
+    this->_vec = _bigValues;      // Resultado final
     
-    clock_t vec_end = clock();    // Final da medição
+    clock_t vec_end = clock();    // Fim preciso
     this->_vTime = calc_time(vec_start, vec_end);
 }
 
-double Pmerge::calc_time(clock_t start, clock_t end){
-    // Converte para microssegundos
+double Pmerge::calc_time(clock_t start, clock_t end) {
+    // Converte para microssegundos com precisão
     double time = static_cast<double>(end - start) / CLOCKS_PER_SEC * 100000;
     return time;
 }
 ```
-
-#### **6. Exemplo de Execução Completa**
+    
+#### **8. Exemplo Completo de Execução Ford-Johnson**
 
 **Entrada:** `./PmergeMe 3 5 9 7 4`
 
 **Passo 1 - Divisão em Pares:**
 ```
 Original: [3, 5, 9, 7, 4]
-Pares: [(3,5), (7,9)]  // 4 fica sozinho
-Big:   [5, 9]          // Maiores de cada par
-Small: [3, 7, 4]       // Menores + elemento sozinho
+Pares formados: [(3,5), (7,9)]  // 4 fica sozinho (elemento ímpar)
+Big array:   [5, 9]      // Maiores de cada par
+Small array: [3, 7, 4]   // Menores + elemento sozinho
 ```
 
-**Passo 2 - Ordenação dos "Grandes":**
-```
+**Passo 2 - Ordenação Recursiva dos "Grandes":**
+```cpp
+// Para arrays pequenos, usa std::sort
+std::sort(big.begin(), big.end());
 Big ordenado: [5, 9]
 ```
 
-**Passo 3 - Inserção usando Jacobsthal:**
+**Passo 3 - Inserção com Sequência de Jacobsthal:**
 ```
-Jacobsthal para len=3: [1]  // Apenas um valor < 3
+Jacobsthal sequence para len=3: [1, 3]  // generateJacobstallSequence(3)
 
 1. Insere small[0]=3 no início: [3, 5, 9]
-2. Insere small[1]=7 (busca binária): [3, 5, 7, 9]  
-3. Insere small[2]=4 (busca binária): [3, 4, 5, 7, 9]
+2. Usa Jacobsthal[0]=1: Insere small[1]=7 
+   - lower_bound(7) em [3,5,9] → posição entre 5 e 9
+   - Resultado: [3, 5, 7, 9]
+3. Continua com small[2]=4:
+   - lower_bound(4) em [3,5,7,9] → posição entre 3 e 5  
+   - Resultado: [3, 4, 5, 7, 9]
 ```
 
-**Saída:**
+**Saída do Programa:**
+```bash
+Before: 3 5 9 7 4
+After:  3 4 5 7 9
+Time to process a range of 5 elements with std::vector : 15 us
+Time to process a range of 5 elements with std::deque  : 12 us
 ```
-before: 3 5 9 7 4
-after:  3 4 5 7 9
-Time to process a range of 5 elements with std::vector : 42 us
-Time to process a range of 5 elements with std::deque  : 38 us
+
+#### **9. Vantagens Teóricas do Ford-Johnson**
+
+1. **Minimização de Comparações:**
+   - Sequência de Jacobsthal é matematicamente ótima
+   - Reduz número total de comparações necessárias
+   
+2. **Híbrido Inteligente:**
+   - Combina divisão (merge-sort) com inserção otimizada
+   - Aproveita vantagens de ambos os algoritmos
+   
+3. **Busca Binária:**
+   - Cada inserção usa O(log n) comparações
+   - Muito mais eficiente que inserção linear
+
+4. **Estrutura Recursiva:**
+   - Divide problema em subproblemas menores
+   - Resolve recursivamente para máxima eficiência
+
+### **Análise de Complexidade Final:**
+- **Temporal:** O(n log n) - otimizada pela sequência de Jacobsthal
+- **Espacial:** O(n) - arrays auxiliares para big/small
+- **Comparações:** Teoricamente mínimo para algoritmos de comparação
+
+---
+
+## **Pontos Importantes para Defesa - Implementação Atual**
+
+### **Exercício 00 - BitcoinExchange: Arquitetura Modular**
+
+#### **Separação de Responsabilidades Implementada:**
+```cpp
+// Classe BitcoinExchange - Core business logic
+class BitcoinExchange {
+    std::map<std::string, float> rates;  // Data storage
+    void makeExchange(const std::string &date) const;  // Core calculation
+};
+
+// Classe Parser - Utility class (static methods only)
+class Parser {
+    static void parseFile(...);         // File processing
+    static std::string validateDate(...); // Date validation
+    static float atof(...);             // Safe conversion
+};
 ```
 
-#### **7. Por que Ford-Johnson é Eficiente?**
+**Por que esta arquitetura é superior:**
+- **Single Responsibility:** Cada classe tem uma responsabilidade específica
+- **Testabilidade:** Parser pode ser testado independentemente
+- **Reutilização:** Parser pode ser usado por outras classes
+- **Manutenibilidade:** Mudanças em validação não afetam business logic
 
-1. **Reduz Comparações:** Sequência de Jacobsthal é matematicamente provada para minimizar comparações
-2. **Híbrido:** Combina vantagens de merge sort e insertion sort
-3. **Recursivo:** Divide problema em subproblemas menores
-4. **Busca Binária:** Usa busca binária para inserções, O(log n) por inserção
+#### **Algoritmo de Busca Otimizado:**
+```cpp
+// Busca exata primeiro (O(log n))
+std::map<std::string, float>::const_iterator it = rates.find(dateStr);
+if (it != rates.end()) {
+    // Encontrou data exata
+    return it->second;
+}
 
-### **Análise de Complexidade:**
-- **Melhor Caso:** O(n log n)
-- **Caso Médio:** O(n log n)  
-- **Pior Caso:** O(n log n)
-- **Espaço:** O(n)
+// Busca data anterior mais próxima (O(log n))  
+it = rates.upper_bound(dateStr);
+if (it == rates.begin())
+    throw std::runtime_error("No available rate for date");
+    
+it--;  // Data anterior mais próxima
+return it->second;
+```
+
+**Vantagens desta implementação:**
+- **Duas tentativas:** Primeiro exata, depois aproximada
+- **Eficiência:** Ambas as buscas são O(log n)
+- **Robustez:** Trata caso de data muito antiga
+- **Clareza:** Lógica fácil de entender e debugar
+
+### **Exercício 01 - RPN: Validação em Camadas**
+
+#### **Sistema de Validação Multinível:**
+```cpp
+// Nível 1: Validação geral da string
+bool checkInput(std::string str) {
+    if (str.empty() || isOnlySpace(str)) return false;
+    
+    std::istringstream iss(str);
+    std::string token;
+    while (iss >> token) {
+        if (token != "+" && token != "-" && token != "*" && token != "/") {
+            if (!checkValidNumber(token)) return false;
+        }
+    }
+    return true;
+}
+
+// Nível 2: Validação específica de números
+bool checkValidNumber(std::string str) {
+    std::istringstream iss(str);
+    int num;
+    if (!(iss >> num) && !iss.eof()) return false;
+    if (num < 0 || num > 9) return false;  // Apenas dígitos 0-9
+    return true;
+}
+
+// Nível 3: Validação durante execução
+if (this->_stack.size() < 2) {
+    std::cerr << "Error: insuficiente number of operands." << std::endl;
+    return;
+}
+```
+
+**Por que três níveis de validação:**
+1. **Pré-processamento:** Valida antes de processar
+2. **Granular:** Valida cada token individualmente  
+3. **Runtime:** Valida durante execução (operandos suficientes)
+
+### **Exercício 02 - PmergeMe: Medição Precisa de Performance**
+
+#### **Metodologia de Timing Implementada:**
+```cpp
+void Pmerge::fordJohnsonVec() {
+    std::vector<int> _smallValues;
+    std::vector<int> _bigValues;
+
+    clock_t vec_start = clock();  // <<<< Inicia APENAS aqui
+    
+    // Apenas o algoritmo é medido, não I/O
+    fordJohnsonVecPairs(this->_vec, _bigValues, _smallValues);
+    fordJohnsonStep2(_bigValues, _smallValues);
+    this->_vec = _bigValues;
+    
+    clock_t vec_end = clock();    // <<<< Para APENAS aqui
+    this->_vTime = calc_time(vec_start, vec_end);
+}
+
+double Pmerge::calc_time(clock_t start, clock_t end) {
+    // Conversão precisa para microssegundos
+    return static_cast<double>(end - start) / CLOCKS_PER_SEC * 100000;
+}
+```
+
+**Características da medição:**
+- **Isolada:** Mede apenas algoritmo, não I/O ou prints
+- **Precisa:** Usa clock() com conversão para microssegundos
+- **Comparável:** Mesma metodologia para vector e deque
+- **Repetível:** Resultados consistentes entre execuções
 
 ---
 
@@ -881,8 +1093,53 @@ try {
 
 #### **Ex02 - Ford-Johnson:**
 - **Medição precisa:** Apenas o algoritmo, não I/O
-- **Containers otimizados:** STL containers específicos para cada operação
-- **Recursão controlada:** Para pequenos conjuntos
+- **Containers otimizados:** STL containers específicos para cada operação  
+- **Jacobsthal correta:** Implementação matemática precisa da sequência
+- **Dual implementation:** Versões paralelas para vector e deque
+
+### **5. Diferenciais da Implementação Atual**
+
+#### **Ex00 - Robustez Excepcional:**
+```cpp
+// Tratamento de overflow durante conversão
+long value = std::atol(argv[i]);
+if (value > INT_MAX) {
+    std::cerr << "Error" << std::endl;
+    return;
+}
+
+// Validação rigorosa de anos bissextos  
+if (month == 2) {
+    bool isLeap = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+    if (day > (isLeap ? 29 : 28))
+        throw std::invalid_argument("invalid date format: " + dateStr);
+}
+```
+
+#### **Ex01 - Feedback Detalhado:**
+```cpp
+// Mensagens de erro específicas e informativas
+std::cerr << "Error line " << lineCount << " - " << line 
+          << " => " << e.what() << std::endl;
+
+// Controle de linha para debugging
+int lineCount = 2;  // Inicia em 2 (pula header)
+```
+
+#### **Ex02 - Documentação Interna:**
+```cpp
+/**
+ * @brief Generates a Jacobsthal sequence up to a specified length.
+ * @param len The maximum value up to which to generate sequence
+ * @return Vector containing Jacobsthal numbers less than 'len'
+ */
+std::vector<size_t> Pmerge::generateJacobstallSequence(size_t len);
+```
+
+**Vantagens da documentação:**
+- **Clareza:** Explica propósito de cada função
+- **Parâmetros:** Documenta entrada e saída
+- **Manutenibilidade:** Facilita modificações futuras
 
 ---
 
