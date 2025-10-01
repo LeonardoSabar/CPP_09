@@ -35,9 +35,7 @@ void Pmerge::run(int argc, char **argv){
 	fordJohnsonVec();
 	printVec(1, this->_vec);
 	printTimeVec();
-	printDec(0, this->_deq);
 	fordJohnsonDeq();
-	printDec(1, this->_deq);
 	printTimeDec();
 }
 

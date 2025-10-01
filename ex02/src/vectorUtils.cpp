@@ -2,9 +2,9 @@
 
 void Pmerge::printVec(int after, std::vector<int> v){
 	if (after == 0)
-		std::cout << "begin: ";
+		std::cout << "Before: ";
 	else
-		std::cout << "after: ";
+		std::cout << "After: ";
 	if (this->_vec.size() < 15){
 		for (std::vector<int>::iterator it = v.begin(); it != v.end(); ++it)
 			std::cout << *it << " ";

@@ -2,9 +2,9 @@
 
 void Pmerge::printDec(int after, std::deque<int> d){
 	if (!after)
-		std::cout << "begin: ";
+		std::cout << "Before: ";
 	else
-		std::cout << "after: ";
+		std::cout << "After: ";
 	if (d.size() < 15){
 		for (std::deque<int>::iterator it = d.begin(); it != d.end(); ++it){
 			std::cout << *it << " ";
