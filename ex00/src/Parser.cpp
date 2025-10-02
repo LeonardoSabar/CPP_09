@@ -81,18 +81,28 @@ int Parser::atoi(const std::string &str) {
 }
 
 float Parser::atof(const std::string &rateStr) {
+	std::string trimmed;
+
+	size_t start = rateStr.find_first_not_of(" \t");
+	size_t end = rateStr.find_last_not_of(" \t");
+	if (start == std::string::npos)
+		throw std::invalid_argument("bad input " + rateStr);
+	trimmed = rateStr.substr(start, end - start + 1);
+
+	std::istringstream iss(trimmed);
 	float rate;
-	std::istringstream iss(rateStr);
+	char extra;
 
-	iss >> rate;
+	if (!(iss >> rate))
+		throw std::invalid_argument("bad input " + rateStr);
 
-	if (iss.fail())
+	if (iss >> extra)
 		throw std::invalid_argument("bad input " + rateStr);
 
 	if (rate < 0)
 		throw std::invalid_argument("not a positive number " + rateStr);
 
-	return (rate);
+	return rate;
 }
 
 bool Parser::validateHeaderInputFile(std::ifstream &file) {

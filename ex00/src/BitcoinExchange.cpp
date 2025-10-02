@@ -22,6 +22,7 @@ void BitcoinExchange::makeExchange(const std::string &date) const {
 
 	std::string	dateStr	= Parser::validateDate(date.substr(0, pipe_pos));
 	std::string	rateStr	= date.substr(pipe_pos + 1);
+
 	float		rate	= Parser::atof(rateStr);
 
 	if (rate > 1000.0f)

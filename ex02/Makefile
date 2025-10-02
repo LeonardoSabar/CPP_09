@@ -30,7 +30,7 @@ $(OBJ_DIR):
 $(OBJ_DIR)/%.o : $(SRC_DIR)/%.cpp | $(OBJ_DIR)
 	@printf "$(CURSIVE)$(GRAY)- Compiling $<... $(RESET)\n"
 	@$(CXX) $(CXXFLAGS) -c $< -o $@
-	@echo "[OK] Compilado: $< -> $@"
+	@echo "[OK] Compiled: $< -> $@"
 
 clean:
 	@rm -rf $(OBJ_DIR)

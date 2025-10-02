@@ -114,7 +114,7 @@ private:
 
 **Responsabilidades:**
 - Armazenar os dados históricos do Bitcoin
-- Realizar cálulos de câmbio
+- Realizar cálculos de câmbio
 - Buscar taxas por data (com algoritmo de data mais próxima)
 
 **B. Classe `Parser` (Static Utility Class):**
@@ -161,7 +161,7 @@ std::map<std::string, float> rates;  // data -> taxa
 ```cpp
 void BitcoinExchange::makeExchange(const std::string &date) const {
     // ... parsing e validação ...
-    
+
     // Busca exata primeiro
     std::map<std::string, float>::const_iterator it = rates.find(dateStr);
     if (it != rates.end()) {
@@ -174,7 +174,7 @@ void BitcoinExchange::makeExchange(const std::string &date) const {
     it = rates.upper_bound(dateStr);
     if (it == rates.begin())
         throw std::runtime_error("No available rate for date: " + dateStr);
-    
+
     it--;  // Data anterior mais próxima
     float result = rate * it->second;
     std::cout << dateStr << " => " << rate << " = " << result << std::endl;
@@ -213,7 +213,7 @@ std::string Parser::validateDate(const std::string &dateStr) {
         if (day > (isLeap ? 29 : 28))
             throw std::invalid_argument("invalid date format: " + dateStr);
     }
-    
+
     // Validação de meses com 30 dias
     else if ((month == 4 || month == 6 || month == 9 || month == 11) && day > 30)
         throw std::invalid_argument("Invalid date format: " + dateStr);
@@ -245,7 +245,7 @@ float Parser::atof(const std::string &rateStr) {
    ```cpp
    int main(int argc, char **argv) {
        BitcoinExchange exchange;
-       
+
        // Carrega database histórico
        Parser::parseFile("data.csv", exchange);
    }
@@ -291,7 +291,7 @@ float Parser::atof(const std::string &rateStr) {
        try {
            exchange.makeExchange(line);  // Processa: "2011-01-03 | 3"
        } catch(std::exception& e) {
-           std::cerr << "Error line " << lineCount << " - " << line 
+           std::cerr << "Error line " << lineCount << " - " << line
                      << " => " << e.what() << std::endl;
        }
        lineCount++;
@@ -302,19 +302,19 @@ float Parser::atof(const std::string &rateStr) {
    ```cpp
    void BitcoinExchange::makeExchange(const std::string &date) const {
        size_t pipe_pos = date.find('|');
-       
+
        std::string dateStr = Parser::validateDate(date.substr(0, pipe_pos));
        std::string rateStr = date.substr(pipe_pos + 1);
        float rate = Parser::atof(rateStr);
-       
+
        if (rate > 1000.0f)
            throw std::invalid_argument("too large a number " + rateStr);
-       
+
        // Busca taxa histórica e calcula
        // ... algoritmo de busca ...
-       
+
        float result = rate * historical_rate;
-       std::cout << dateStr << " => " << std::fixed << std::setprecision(2) 
+       std::cout << dateStr << " => " << std::fixed << std::setprecision(2)
                  << rate << " = " << result << std::endl;
    }
    ```
@@ -407,15 +407,15 @@ public:
 void rpn::run(std::string expression) {
     if (!checkInput(expression))
         return;
-    
+
     for (size_t i = 0; i < expression.size(); i++) {
         if (expression[i] == ' ')
             continue;
-        
+
         if (std::isdigit(expression[i]))
             this->_stack.push(expression[i] - '0');  // Converte char para int
-        
-        else if (expression[i] == '+' || expression[i] == '-' || 
+
+        else if (expression[i] == '+' || expression[i] == '-' ||
                  expression[i] == '*' || expression[i] == '/') {
             if (this->_stack.size() < 2) {
                 std::cerr << "Error: insuficiente number of operands." << std::endl;
@@ -444,16 +444,16 @@ void rpn::calculate(char op) {
     int a = this->_stack.top(); this->_stack.pop();  // Primeiro operando
 
     switch (op) {
-        case '+': 
+        case '+':
             this->_stack.push(a + b);
             break;
-        case '-': 
+        case '-':
             this->_stack.push(a - b);  // SEMPRE a - b, nunca b - a
             break;
-        case '*': 
+        case '*':
             this->_stack.push(a * b);
             break;
-        case '/': 
+        case '/':
             if (b == 0)
                 throw std::runtime_error("Error: Division by zero.");
             this->_stack.push(a / b);  // SEMPRE a / b, nunca b / a
@@ -475,7 +475,7 @@ bool rpn::checkInput(std::string str) {
         std::cerr << "Error: empty input." << std::endl;
         return false;
     }
-    
+
     std::istringstream iss(str);
     std::string token;
     while (iss >> token) {
@@ -566,7 +566,7 @@ bool rpn::checkValidNumber(std::string str){
         std::cerr << "Error: invalid operator '" << str << "'." << std::endl;
         return false;
     }
-    
+
     // Apenas dígitos de 0-9 são aceitos
     if (num < 0 || num > 9){
         std::cerr << "Error: invalid number '" << str << "'." << std::endl;
@@ -672,11 +672,11 @@ if (it != rates.end()) {
     return it->second;
 }
 
-// Busca data anterior mais próxima (O(log n))  
+// Busca data anterior mais próxima (O(log n))
 it = rates.upper_bound(dateStr);
 if (it == rates.begin())
     throw std::runtime_error("No available rate for date");
-    
+
 it--;  // Data anterior mais próxima
 return it->second;
 ```
@@ -694,7 +694,7 @@ return it->second;
 // Nível 1: Validação geral da string
 bool checkInput(std::string str) {
     if (str.empty() || isOnlySpace(str)) return false;
-    
+
     std::istringstream iss(str);
     std::string token;
     while (iss >> token) {
@@ -723,7 +723,7 @@ if (this->_stack.size() < 2) {
 
 **Por que três níveis de validação:**
 1. **Pré-processamento:** Valida antes de processar
-2. **Granular:** Valida cada token individualmente  
+2. **Granular:** Valida cada token individualmente
 3. **Runtime:** Valida durante execução (operandos suficientes)
 
 ### **Exercício 02 - PmergeMe: Medição Precisa de Performance**
@@ -735,11 +735,11 @@ void Pmerge::fordJohnsonVec() {
     std::vector<int> _bigValues;
 
     clock_t vec_start = clock();  // Início preciso
-    
+
     fordJohnsonVecPairs(this->_vec, _bigValues, _smallValues);
     fordJohnsonStep2(_bigValues, _smallValues);
     this->_vec = _bigValues;      // Resultado final
-    
+
     clock_t vec_end = clock();    // Fim preciso
     this->_vTime = calc_time(vec_start, vec_end);
 }
@@ -750,7 +750,7 @@ double Pmerge::calc_time(clock_t start, clock_t end) {
     return time;
 }
 ```
-    
+
 #### **8. Exemplo Completo de Execução Ford-Johnson**
 
 **Entrada:** `./PmergeMe 3 5 9 7 4`
@@ -775,11 +775,11 @@ Big ordenado: [5, 9]
 Jacobsthal sequence para len=3: [1, 3]  // generateJacobstallSequence(3)
 
 1. Insere small[0]=3 no início: [3, 5, 9]
-2. Usa Jacobsthal[0]=1: Insere small[1]=7 
+2. Usa Jacobsthal[0]=1: Insere small[1]=7
    - lower_bound(7) em [3,5,9] → posição entre 5 e 9
    - Resultado: [3, 5, 7, 9]
 3. Continua com small[2]=4:
-   - lower_bound(4) em [3,5,7,9] → posição entre 3 e 5  
+   - lower_bound(4) em [3,5,7,9] → posição entre 3 e 5
    - Resultado: [3, 4, 5, 7, 9]
 ```
 
@@ -796,11 +796,11 @@ Time to process a range of 5 elements with std::deque  : 12 us
 1. **Minimização de Comparações:**
    - Sequência de Jacobsthal é matematicamente ótima
    - Reduz número total de comparações necessárias
-   
+
 2. **Híbrido Inteligente:**
    - Combina divisão (merge-sort) com inserção otimizada
    - Aproveita vantagens de ambos os algoritmos
-   
+
 3. **Busca Binária:**
    - Cada inserção usa O(log n) comparações
    - Muito mais eficiente que inserção linear
@@ -833,7 +833,7 @@ Time to process a range of 5 elements with std::deque  : 12 us
 
 **Resposta:**
 - **STL é otimizada:** Implementação testada e eficiente
-- **RAII automático:** Gerenciamento de memória seguro  
+- **RAII automático:** Gerenciamento de memória seguro
 - **Adaptador:** Pode usar `vector`, `deque` ou `list` por baixo conforme necessário
 - **Interface limpa:** Apenas operações necessárias expostas
 
@@ -903,7 +903,7 @@ try {
 
 #### **Ex02 - Ford-Johnson:**
 - **Medição precisa:** Apenas o algoritmo, não I/O
-- **Containers otimizados:** STL containers específicos para cada operação  
+- **Containers otimizados:** STL containers específicos para cada operação
 - **Jacobsthal correta:** Implementação matemática precisa da sequência
 - **Dual implementation:** Versões paralelas para vector e deque
 
@@ -918,7 +918,7 @@ if (value > INT_MAX) {
     return;
 }
 
-// Validação rigorosa de anos bissextos  
+// Validação rigorosa de anos bissextos
 if (month == 2) {
     bool isLeap = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
     if (day > (isLeap ? 29 : 28))
@@ -929,7 +929,7 @@ if (month == 2) {
 #### **Ex01 - Feedback Detalhado:**
 ```cpp
 // Mensagens de erro específicas e informativas
-std::cerr << "Error line " << lineCount << " - " << line 
+std::cerr << "Error line " << lineCount << " - " << line
           << " => " << e.what() << std::endl;
 
 // Controle de linha para debugging
@@ -1016,7 +1016,7 @@ Time to process with std::deque  : 198 us
 
 **Resposta:**
 - **STL é otimizada:** Implementação testada e eficiente
-- **RAII automático:** Gerenciamento de memória seguro  
+- **RAII automático:** Gerenciamento de memória seguro
 - **Adaptador:** Pode usar `vector`, `deque` ou `list` por baixo conforme necessário
 - **Interface limpa:** Apenas operações necessárias expostas
 
@@ -1086,7 +1086,7 @@ try {
 
 #### **Ex02 - Ford-Johnson:**
 - **Medição precisa:** Apenas o algoritmo, não I/O
-- **Containers otimizados:** STL containers específicos para cada operação  
+- **Containers otimizados:** STL containers específicos para cada operação
 - **Jacobsthal correta:** Implementação matemática precisa da sequência
 - **Dual implementation:** Versões paralelas para vector e deque
 
@@ -1101,7 +1101,7 @@ if (value > INT_MAX) {
     return;
 }
 
-// Validação rigorosa de anos bissextos  
+// Validação rigorosa de anos bissextos
 if (month == 2) {
     bool isLeap = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
     if (day > (isLeap ? 29 : 28))
@@ -1112,7 +1112,7 @@ if (month == 2) {
 #### **Ex01 - Feedback Detalhado:**
 ```cpp
 // Mensagens de erro específicas e informativas
-std::cerr << "Error line " << lineCount << " - " << line 
+std::cerr << "Error line " << lineCount << " - " << line
           << " => " << e.what() << std::endl;
 
 // Controle de linha para debugging
@@ -1199,7 +1199,7 @@ Time to process with std::deque  : 198 us
 
 **Resposta:**
 - **STL é otimizada:** Implementação testada e eficiente
-- **RAII automático:** Gerenciamento de memória seguro  
+- **RAII automático:** Gerenciamento de memória seguro
 - **Adaptador:** Pode usar `vector`, `deque` ou `list` por baixo conforme necessário
 - **Interface limpa:** Apenas operações necessárias expostas
 
@@ -1269,7 +1269,7 @@ try {
 
 #### **Ex02 - Ford-Johnson:**
 - **Medição precisa:** Apenas o algoritmo, não I/O
-- **Containers otimizados:** STL containers específicos para cada operação  
+- **Containers otimizados:** STL containers específicos para cada operação
 - **Jacobsthal correta:** Implementação matemática precisa da sequência
 - **Dual implementation:** Versões paralelas para vector e deque
 
@@ -1284,7 +1284,7 @@ if (value > INT_MAX) {
     return;
 }
 
-// Validação rigorosa de anos bissextos  
+// Validação rigorosa de anos bissextos
 if (month == 2) {
     bool isLeap = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
     if (day > (isLeap ? 29 : 28))
@@ -1295,7 +1295,7 @@ if (month == 2) {
 #### **Ex01 - Feedback Detalhado:**
 ```cpp
 // Mensagens de erro específicas e informativas
-std::cerr << "Error line " << lineCount << " - " << line 
+std::cerr << "Error line " << lineCount << " - " << line
           << " => " << e.what() << std::endl;
 
 // Controle de linha para debugging
@@ -1382,7 +1382,7 @@ Time to process with std::deque  : 198 us
 
 **Resposta:**
 - **STL é otimizada:** Implementação testada e eficiente
-- **RAII automático:** Gerenciamento de memória seguro  
+- **RAII automático:** Gerenciamento de memória seguro
 - **Adaptador:** Pode usar `vector`, `deque` ou `list` por baixo conforme necessário
 - **Interface limpa:** Apenas operações necessárias expostas
 
@@ -1452,7 +1452,7 @@ try {
 
 #### **Ex02 - Ford-Johnson:**
 - **Medição precisa:** Apenas o algoritmo, não I/O
-- **Containers otimizados:** STL containers específicos para cada operação  
+- **Containers otimizados:** STL containers específicos para cada operação
 - **Jacobsthal correta:** Implementação matemática precisa da sequência
 - **Dual implementation:** Versões paralelas para vector e deque
 
@@ -1467,7 +1467,7 @@ if (value > INT_MAX) {
     return;
 }
 
-// Validação rigorosa de anos bissextos  
+// Validação rigorosa de anos bissextos
 if (month == 2) {
     bool isLeap = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
     if (day > (isLeap ? 29 : 28))
@@ -1478,7 +1478,7 @@ if (month == 2) {
 #### **Ex01 - Feedback Detalhado:**
 ```cpp
 // Mensagens de erro específicas e informativas
-std::cerr << "Error line " << lineCount << " - " << line 
+std::cerr << "Error line " << lineCount << " - " << line
           << " => " << e.what() << std::endl;
 
 // Controle de linha para debugging
@@ -1565,7 +1565,7 @@ Time to process with std::deque  : 198 us
 
 **Resposta:**
 - **STL é otimizada:** Implementação testada e eficiente
-- **RAII automático:** Gerenciamento de memória seguro  
+- **RAII automático:** Gerenciamento de memória seguro
 - **Adaptador:** Pode usar `vector`, `deque` ou `list` por baixo conforme necessário
 - **Interface limpa:** Apenas operações necessárias expostas
 
@@ -1635,7 +1635,7 @@ try {
 
 #### **Ex02 - Ford-Johnson:**
 - **Medição precisa:** Apenas o algoritmo, não I/O
-- **Containers otimizados:** STL containers específicos para cada operação  
+- **Containers otimizados:** STL containers específicos para cada operação
 - **Jacobsthal correta:** Implementação matemática precisa da sequência
 - **Dual implementation:** Versões paralelas para vector e deque
 
@@ -1650,7 +1650,7 @@ if (value > INT_MAX) {
     return;
 }
 
-// Validação rigorosa de anos bissextos  
+// Validação rigorosa de anos bissextos
 if (month == 2) {
     bool isLeap = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
     if (day > (isLeap ? 29 : 28))
@@ -1661,7 +1661,7 @@ if (month == 2) {
 #### **Ex01 - Feedback Detalhado:**
 ```cpp
 // Mensagens de erro específicas e informativas
-std::cerr << "Error line " << lineCount << " - " << line 
+std::cerr << "Error line " << lineCount << " - " << line
           << " => " << e.what() << std::endl;
 
 // Controle de linha para debugging
@@ -1748,7 +1748,7 @@ Time to process with std::deque  : 198 us
 
 **Resposta:**
 - **STL é otimizada:** Implementação testada e eficiente
-- **RAII automático:** Gerenciamento de memória seguro  
+- **RAII automático:** Gerenciamento de memória seguro
 - **Adaptador:** Pode usar `vector`, `deque` ou `list` por baixo conforme necessário
 - **Interface limpa:** Apenas operações necessárias expostas
 
@@ -1818,7 +1818,7 @@ try {
 
 #### **Ex02 - Ford-Johnson:**
 - **Medição precisa:** Apenas o algoritmo, não I/O
-- **Containers otimizados:** STL containers específicos para cada operação  
+- **Containers otimizados:** STL containers específicos para cada operação
 - **Jacobsthal correta:** Implementação matemática precisa da sequência
 - **Dual implementation:** Versões paralelas para vector e deque
 
@@ -1833,7 +1833,7 @@ if (value > INT_MAX) {
     return;
 }
 
-// Validação rigorosa de anos bissextos  
+// Validação rigorosa de anos bissextos
 if (month == 2) {
     bool isLeap = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
     if (day > (isLeap ? 29 : 28))
